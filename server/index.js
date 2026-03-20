@@ -206,3 +206,70 @@ initDb().then(() => {
   console.error('DB init failed:', err);
   process.exit(1);
 });
+
+// ─── Meta Ads Sync ────────────────────────────────────────────────────────────
+
+app.post('/api/meta-sync', async (req, res) => {
+  try {
+    const token = process.env.META_ACCESS_TOKEN;
+    const adAccountId = process.env.META_AD_ACCOUNT_ID;
+
+    if (!token || !adAccountId) {
+      return res.status(400).json({ error: 'META_ACCESS_TOKEN or META_AD_ACCOUNT_ID not set' });
+    }
+
+    const { week_start, week_end } = req.body;
+
+    const url = `https://graph.facebook.com/v25.0/act_${adAccountId}/insights` +
+      `?fields=ad_name,campaign_name,impressions,clicks,spend,actions` +
+      `&time_range={"since":"${week_start}","until":"${week_end}"}` +
+      `&level=ad` +
+      `&access_token=${token}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.error) {
+      return res.status(400).json({ error: data.error.message });
+    }
+
+    const ads = data.data || [];
+
+    // Map ad names to channels
+    const channelMap = (adName) => {
+      const name = adName.toLowerCase();
+      if (name.includes('sell')) return 'Facebook Seller Ad';
+      if (name.includes('buy') || name.includes('buying')) return 'Facebook Buyer Ad';
+      if (name.includes('website') || name.includes('visitor')) return 'Website';
+      if (name.includes('group')) return 'Facebook Groups';
+      return 'Facebook Buyer Ad'; // default
+    };
+
+    // Aggregate by channel
+    const channelData = {};
+    for (const ad of ads) {
+      const channel = channelMap(ad.ad_name || ad.campaign_name || '');
+      if (!channelData[channel]) {
+        channelData[channel] = { impressions: 0, clicks: 0, leads: 0, spend: 0 };
+      }
+      channelData[channel].impressions += parseInt(ad.impressions || 0);
+      channelData[channel].clicks += parseInt(ad.clicks || 0);
+      channelData[channel].spend += parseFloat(ad.spend || 0);
+
+      // Count lead form submissions from actions
+      const actions = ad.actions || [];
+      const leadAction = actions.find(a =>
+        a.action_type === 'lead' ||
+        a.action_type === 'onsite_conversion.lead_grouped'
+      );
+      if (leadAction) {
+        channelData[channel].leads += parseInt(leadAction.value || 0);
+      }
+    }
+
+    res.json({ channelData, rawAds: ads });
+  } catch (err) {
+    console.error('Meta sync error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});

@@ -35,9 +35,47 @@ export default function WeeklyForm({ onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [focusedRow, setFocusedRow] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState(null)
 
   const update = (channel, field, value) => {
     setData(d => ({ ...d, [channel]: { ...d[channel], [field]: value } }))
+  }
+
+  const syncFromMeta = async () => {
+    setSyncing(true)
+    setSyncMsg(null)
+    try {
+      const weekEnd = new Date(weekStart + "T00:00:00")
+      weekEnd.setDate(weekEnd.getDate() + 6)
+      const week_end = weekEnd.toISOString().split("T")[0]
+      const res = await fetch("/api/meta-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week_start: weekStart, week_end }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error)
+      setData(prev => {
+        const next = { ...prev }
+        for (const [channel, values] of Object.entries(result.channelData)) {
+          if (next[channel]) {
+            next[channel] = {
+              impressions: values.impressions || "",
+              clicks: values.clicks || "",
+              leads: values.leads || "",
+              spend: values.spend ? values.spend.toFixed(2) : "",
+            }
+          }
+        }
+        return next
+      })
+      setSyncMsg("✓ Synced " + Object.keys(result.channelData).length + " channels from Meta")
+    } catch (err) {
+      setSyncMsg("✕ " + err.message)
+    } finally {
+      setSyncing(false)
+    }
   }
 
   const totalLeads = Object.values(data).reduce((s, r) => s + (parseFloat(r.leads) || 0), 0)
@@ -123,6 +161,35 @@ export default function WeeklyForm({ onSaved }) {
           }}>
             📅 {formatWeekLabel(weekStart)}
           </div>
+        </div>
+
+        {/* Meta Sync Button */}
+        <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={syncFromMeta}
+            disabled={syncing}
+            style={{
+              background: syncing ? '#e2e8f0' : 'linear-gradient(135deg, #1877f2, #0d5dbf)',
+              color: syncing ? '#999' : 'white',
+              border: 'none', borderRadius: 8,
+              padding: '0.65rem 1.25rem', fontSize: '0.9rem',
+              fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+            }}
+          >
+            <span>f</span>
+            {syncing ? 'Syncing from Meta...' : 'Sync from Meta Ads'}
+          </button>
+          {syncMsg && (
+            <span style={{
+              fontSize: '0.85rem',
+              color: syncMsg.startsWith('✓') ? '#2d7a4f' : '#c53030',
+              fontWeight: 500,
+            }}>
+              {syncMsg}
+            </span>
+          )}
         </div>
 
         <form onSubmit={handleSubmit}>
