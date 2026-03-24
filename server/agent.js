@@ -47,7 +47,7 @@ async function pullMetaData(week_start, week_end) {
   console.log(`[Agent] Pulling Meta data for ${week_start} to ${week_end}`);
 
   const url = `https://graph.facebook.com/v25.0/act_${META_AD_ACCOUNT_ID}/insights` +
-    `?fields=ad_id,ad_name,campaign_name,impressions,clicks,spend,actions,daily_budget` +
+    `?fields=ad_id,ad_name,campaign_name,impressions,clicks,spend,actions` +
     `&time_range={"since":"${week_start}","until":"${week_end}"}` +
     `&level=ad` +
     `&access_token=${META_TOKEN}`;
