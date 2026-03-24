@@ -111,7 +111,7 @@ async function sendApprovalEmail({ to, weekLabel, analysis, recommendations, app
   });
 
   const result = await resend.emails.send({
-    from: 'agent@mnhomes-harchi.com',
+    from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
     to,
     subject: `📊 Daily Strategy Brief — ${weekLabel}`,
     html,
