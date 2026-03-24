@@ -273,3 +273,60 @@ app.post('/api/meta-sync', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── Agent Approval Endpoint ──────────────────────────────────────────────────
+
+app.get('/api/agent/approve/:token', async (req, res) => {
+  try {
+    // Ensure table exists
+    run(`CREATE TABLE IF NOT EXISTS approval_tokens (
+      token TEXT PRIMARY KEY,
+      recommendations TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now'))
+    )`, []);
+
+    const rows = query('SELECT * FROM approval_tokens WHERE token = ?', [req.params.token]);
+    if (rows.length === 0) {
+      return res.send(buildPage('Invalid or expired link', 'This approval link is invalid or has already been used.', false));
+    }
+
+    const row = rows[0];
+    if (row.status === 'approved') {
+      return res.send(buildPage('Already Applied', 'These budget changes have already been applied.', true));
+    }
+
+    const recommendations = JSON.parse(row.recommendations || '[]');
+
+    // Apply changes
+    const { applyBudgetChanges } = require('./agent');
+    const results = await applyBudgetChanges(recommendations);
+
+    // Mark token as used
+    run('UPDATE approval_tokens SET status = ? WHERE token = ?', ['approved', req.params.token]);
+
+    const summary = results.map(r =>
+      `${r.ad}: ${r.action}${r.newBudget ? ' to $' + r.newBudget + '/day' : ''} — ${r.success ? '✓ Applied' : '✕ Failed'}`
+    ).join('\n');
+
+    res.send(buildPage('Changes Applied!', summary || 'No changes were needed.', true));
+  } catch (err) {
+    console.error('Approval error:', err);
+    res.send(buildPage('Error', err.message, false));
+  }
+});
+
+function buildPage(title, message, success) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>${title}</title></head>
+<body style="margin:0;padding:40px;background:#f4f1eb;font-family:Arial,sans-serif;text-align:center;">
+  <div style="max-width:500px;margin:80px auto;background:white;border-radius:12px;padding:40px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+    <div style="font-size:48px;margin-bottom:16px;">${success ? '✅' : '❌'}</div>
+    <h1 style="color:#1e3a5f;font-size:24px;margin-bottom:12px;">${title}</h1>
+    <pre style="color:#4a5568;font-size:14px;white-space:pre-wrap;text-align:left;background:#f8f6f0;padding:16px;border-radius:8px;">${message}</pre>
+    <a href="http://localhost:5173" style="display:inline-block;margin-top:20px;background:#1e3a5f;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Open Dashboard</a>
+  </div>
+</body>
+</html>`;
+}
