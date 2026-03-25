@@ -215,13 +215,25 @@ initDb().then(() => {
   try {
     const cron = require('node-cron');
     const { runAgent } = require('./agent');
+    const { runQA } = require('./qa');
+
+    // Daily agent at 8am
     cron.schedule('0 8 * * *', () => {
       console.log('[Agent] Scheduled run at 8am');
       runAgent();
     });
     console.log('[Agent] Scheduled daily at 8:00 AM');
+
+    // QA checks every hour
+    cron.schedule('0 * * * *', () => {
+      console.log('[QA] Hourly check triggered');
+      runQA();
+    });
+    // Run QA once on startup
+    setTimeout(() => runQA(), 5000);
+    console.log('[QA] Scheduled hourly health checks');
   } catch (e) {
-    console.warn('[Agent] Could not start agent scheduler:', e.message);
+    console.warn('[Agent] Could not start schedulers:', e.message);
   }
 }).catch(err => {
   console.error('DB init failed:', err);
@@ -359,6 +371,18 @@ app.post('/api/agent/run', async (req, res) => {
     const { runAgent } = require('./agent');
     res.json({ message: 'Agent started' });
     runAgent();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Manual QA Trigger ────────────────────────────────────────────────────────
+
+app.post('/api/qa/run', async (req, res) => {
+  try {
+    const { runQA } = require('./qa');
+    res.json({ message: 'QA checks started' });
+    runQA();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
