@@ -262,14 +262,17 @@ async function runAgent() {
   }
 }
 
-initDb().then(() => {
-  run(`CREATE TABLE IF NOT EXISTS approval_tokens (
-    token TEXT PRIMARY KEY, recommendations TEXT,
-    status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now'))
-  )`, []);
-  runAgent();
-  cron.schedule('0 8 * * *', () => { console.log('[Agent] Scheduled run'); runAgent(); });
-  console.log('[Agent] Scheduled daily at 8:00 AM');
-}).catch(err => { console.error('[Agent] DB init failed:', err); process.exit(1); });
+// Only auto-start if run directly (node agent.js), not when required by server
+if (require.main === module) {
+  initDb().then(() => {
+    run(`CREATE TABLE IF NOT EXISTS approval_tokens (
+      token TEXT PRIMARY KEY, recommendations TEXT,
+      status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now'))
+    )`, []);
+    runAgent();
+    cron.schedule('0 8 * * *', () => { console.log('[Agent] Scheduled run'); runAgent(); });
+    console.log('[Agent] Scheduled daily at 8:00 AM');
+  }).catch(err => { console.error('[Agent] DB init failed:', err); process.exit(1); });
+}
 
 module.exports = { runAgent, applyBudgetChanges };

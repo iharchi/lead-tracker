@@ -199,9 +199,30 @@ Be direct and tactical. Real estate specific. No generic advice. Under 350 words
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 initDb().then(() => {
+  // Create approval_tokens table
+  run(`CREATE TABLE IF NOT EXISTS approval_tokens (
+    token TEXT PRIMARY KEY,
+    recommendations TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now'))
+  )`, []);
+
   app.listen(PORT, () => {
     console.log(`Lead Tracker API running on http://localhost:${PORT}`);
   });
+
+  // Start agent inside same process so they share the DB instance
+  try {
+    const cron = require('node-cron');
+    const { runAgent } = require('./agent');
+    cron.schedule('0 8 * * *', () => {
+      console.log('[Agent] Scheduled run at 8am');
+      runAgent();
+    });
+    console.log('[Agent] Scheduled daily at 8:00 AM');
+  } catch (e) {
+    console.warn('[Agent] Could not start agent scheduler:', e.message);
+  }
 }).catch(err => {
   console.error('DB init failed:', err);
   process.exit(1);
@@ -330,3 +351,15 @@ function buildPage(title, message, success) {
 </body>
 </html>`;
 }
+
+// ─── Manual Agent Trigger ─────────────────────────────────────────────────────
+
+app.post('/api/agent/run', async (req, res) => {
+  try {
+    const { runAgent } = require('./agent');
+    res.json({ message: 'Agent started' });
+    runAgent();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
