@@ -4,6 +4,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { v4: uuidv4 } = require('uuid');
 const { initDb, query, run } = require('./db');
 const { sendApprovalEmail } = require('./mailer');
+const { publishTodaysPost } = require('./poster');
 
 const AGENT_EMAIL = process.env.AGENT_EMAIL || 'harchi.isaak@gmail.com';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
@@ -254,6 +255,12 @@ async function runAgent() {
         approvalToken: token, totalSpend, totalLeads, baseUrl: BASE_URL,
       });
       console.log(`[Agent] Email sent to ${AGENT_EMAIL}`);
+
+      // Auto-post to Facebook Page on Mon/Wed/Fri
+      const postResult = await publishTodaysPost(analysis);
+      if (postResult) {
+        console.log(`[Agent] Facebook Page post published for ${postResult.dayName}`);
+      }
     } else {
       console.log('[Agent] Analysis:\n', analysis);
     }
