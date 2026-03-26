@@ -152,77 +152,68 @@ async function checkAdAccount() {
   }
 }
 
-// ─── Check 3: Active Ads Performance ─────────────────────────────────────────
+// ─── Check 3: Lead Generation Performance ────────────────────────────────────
 
-async function checkAdPerformance(db) {
+async function checkAdPerformance() {
   try {
     const { query } = require('./db');
 
-    // Get last 7 days of data
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    // Check if any leads came in this week
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    const weekStartStr = weekStart.toISOString().split('T')[0];
 
-    const url = `https://graph.facebook.com/v25.0/act_${META_AD_ACCOUNT_ID}/insights` +
-      `?fields=ad_name,impressions,clicks,spend,actions` +
-      `&time_range={"since":"${weekAgo}","until":"${today}"}` +
-      `&level=ad&access_token=${META_TOKEN}`;
+    const entries = query('SELECT * FROM weekly_entries WHERE week_start >= ?', [weekStartStr]);
+    const totalLeads = entries.reduce((s, e) => s + e.leads, 0);
+    const totalSpend = entries.reduce((s, e) => s + e.spend, 0);
+    const dayOfWeek = new Date().getDay(); // 0=Sun, 1=Mon...
 
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (data.error || !data.data) return;
-
-    const ads = data.data;
-    const totalSpend = ads.reduce((s, a) => s + parseFloat(a.spend || 0), 0);
-    const totalLeads = ads.reduce((s, a) => {
-      const la = (a.actions || []).find(x => x.action_type === 'lead');
-      return s + parseInt(la?.value || 0);
-    }, 0);
-
-    // Alert: spending but zero leads for 3+ days
-    if (totalSpend > 15 && totalLeads === 0) {
-      const key = alertKey('zero_leads', 'week');
+    // Alert: Wednesday or later with zero leads this week
+    if (dayOfWeek >= 3 && totalLeads === 0) {
+      const key = alertKey('zero_leads_week', weekStartStr);
       if (!sentAlerts.has(key)) {
         sentAlerts.add(key);
         await sendAlert(
-          'Spending Money With Zero Leads',
-          `You've spent $${totalSpend.toFixed(2)} in the last 7 days but generated 0 leads. Your ads may need new creative or targeting adjustments. Check your lead form and ad setup.`,
-          'critical'
+          'No Leads Yet This Week',
+          `It's ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dayOfWeek]} and you have 0 leads logged this week. Make sure to:
+
+1. Post in Twin Cities Facebook Groups today
+2. Check your Google LSA dashboard for any pending leads
+3. Follow up with anyone who visited your website
+
+Consistency this week is key to hitting your 20-lead monthly goal.`,
+          'warning'
         );
       }
     }
 
-    // Alert: high CPL
-    if (totalLeads > 0) {
-      const cpl = totalSpend / totalLeads;
-      if (cpl > 30) {
-        const key = alertKey('high_cpl', Math.floor(cpl));
+    // Alert: Google LSA spend with no leads (if LSA data exists)
+    const lsaEntry = entries.find(e => e.channel === 'Google Business');
+    if (lsaEntry && lsaEntry.spend > 10 && lsaEntry.leads === 0) {
+      const key = alertKey('lsa_zero_leads', weekStartStr);
+      if (!sentAlerts.has(key)) {
+        sentAlerts.add(key);
+        await sendAlert(
+          'Google LSA Spending With No Leads',
+          `Your Google LSA has spent $${lsaEntry.spend.toFixed(2)} this week with 0 leads. Check your LSA dashboard at ads.google.com/local-services-ads to make sure your profile is approved and your service area is correct.`,
+          'warning'
+        );
+      }
+    }
+
+    // Weekly goal check — Friday alert if behind pace
+    if (dayOfWeek === 5) {
+      const weeklyGoal = 5; // 20 leads/month = ~5/week
+      if (totalLeads < 2) {
+        const key = alertKey('behind_weekly_goal', weekStartStr);
         if (!sentAlerts.has(key)) {
           sentAlerts.add(key);
           await sendAlert(
-            'High Cost Per Lead: $' + cpl.toFixed(2),
-            `Your cost per lead is $${cpl.toFixed(2)} this week, which is above the $30 threshold. Consider pausing underperforming ads and shifting budget to your best performer.`,
+            'Behind on Weekly Lead Goal',
+            `It's Friday and you have ${totalLeads} lead${totalLeads !== 1 ? 's' : ''} this week (goal: ${weeklyGoal}). This weekend, post in Facebook Groups, ask a past client for a referral, and make sure your Google Business profile has a recent post to boost visibility.`,
             'warning'
           );
         }
-      }
-    }
-
-    // Alert: no active ads running
-    const activeUrl = `https://graph.facebook.com/v25.0/act_${META_AD_ACCOUNT_ID}/ads?fields=name,status&access_token=${META_TOKEN}`;
-    const activeRes = await fetch(activeUrl);
-    const activeData = await activeRes.json();
-    const activeAds = (activeData.data || []).filter(a => a.status === 'ACTIVE');
-
-    if (activeAds.length === 0) {
-      const key = alertKey('no_active_ads', 'daily');
-      if (!sentAlerts.has(key)) {
-        sentAlerts.add(key);
-        await sendAlert(
-          'No Active Ads Running',
-          `You currently have no active ads running. Your lead generation has stopped. Go to Meta Ads Manager to reactivate your campaigns.`,
-          'critical'
-        );
       }
     }
 

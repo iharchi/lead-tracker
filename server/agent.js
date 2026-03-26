@@ -110,12 +110,16 @@ async function analyzeAndRecommend(channelData, rawAds) {
 
   const bestChannel = channelSummary.sort((a, b) => parseFloat(b.ctr) - parseFloat(a.ctr))[0];
 
-  const prompt = `You are a real estate marketing expert and agent for Isaak Harchi, Twin Cities real estate agent.
+  const prompt = `You are a real estate lead generation expert for Isaak Harchi, a real estate agent in Twin Cities, Minneapolis.
+
+CONTEXT:
+- Isaak spent $100 on Meta ads and got only 2 low-quality leads. Meta paid ads are paused.
+- Focus is now on Google LSA, organic channels, and relationship-based lead gen.
+- Budget: $25/month Google LSA only. All other channels are free/organic.
 
 GOALS: 20 leads/month, 2 closed deals/year
-BUDGET: $75 Facebook/month, $25 Google LSA/month
 
-PERFORMANCE:
+PERFORMANCE THIS WEEK:
 - Total leads: ${totalLeads} / 20 goal
 - Total spend: $${totalSpend.toFixed(2)}
 - CPL: ${totalLeads > 0 ? '$' + (totalSpend / totalLeads).toFixed(2) : 'N/A'}
@@ -124,58 +128,56 @@ PERFORMANCE:
 CHANNEL DATA:
 ${JSON.stringify(channelSummary, null, 2)}
 
-CURRENT META ADS:
-${JSON.stringify(adBudgets.map(a => ({ id: a.id, name: a.name, status: a.status, daily_budget: a.adset?.daily_budget })), null, 2)}
+BEST PERFORMING CHANNEL: ${bestChannel?.channel || 'Google Business'} (CTR: ${bestChannel?.ctr || 'N/A'})
 
-BEST PERFORMING CHANNEL: ${bestChannel?.channel || 'Facebook Buyer Ad'} (CTR: ${bestChannel?.ctr || 'N/A'})
+ACTIVE CHANNELS TO OPTIMIZE:
+1. Google LSA ($25/month) - High intent buyers/sellers searching "realtor Minneapolis"
+2. Google Business Profile (free) - Local SEO, reviews, posts
+3. Facebook Groups (free) - Twin Cities real estate groups, community engagement
+4. Website (free) - HubSpot lead capture forms, organic traffic
+5. Zillow (free profile) - Profile optimization, reviews
 
 Provide your response in this exact format:
 
 ## ANALYSIS
-[2-3 sentences on what's working and what's not]
+[2-3 sentences analyzing what channels are driving leads and what needs attention. Be specific to the data above.]
 
-## THREE PRIORITY ACTIONS
-1. [Specific action]
-2. [Specific action]  
-3. [Specific action]
+## THREE PRIORITY ACTIONS FOR THIS WEEK
+1. [Specific action for Google LSA or Google Business — exact steps]
+2. [Specific action for Facebook Groups — exact post idea or engagement tactic]
+3. [Specific action for website or Zillow — exact optimization step]
 
-## CREATIVE BRIEF
-**Ad:** [Which ad this is for]
-**Headlines (test all 3):**
-- [Headline 1 — under 40 chars, Twin Cities specific]
-- [Headline 2 — under 40 chars, neighborhood specific]
-- [Headline 3 — under 40 chars, benefit focused]
+## GOOGLE LSA OPTIMIZATION
+**Current Status:** [assessment based on spend and leads]
+**This Week's Focus:** [1 specific thing to improve LSA performance]
+**Bid Strategy:** [recommendation on budget allocation]
 
-**Body Copy:**
-[2-3 sentences, conversational, no jargon, mention Twin Cities]
+## FACEBOOK GROUPS CONTENT PLAN
+**Post 1 (Monday):**
+[Exact post to write — topic, hook, 2-3 sentences, call to action. Reference Twin Cities neighborhoods.]
 
-**Call to Action:** [Button text and why]
+**Post 2 (Wednesday):**
+[Exact post to write — different angle, educational or market update, Twin Cities specific.]
 
-**Target Audience:**
-- Age: [range]
-- Location: [radius from Minneapolis]
-- Interests: [3-4 specific interests]
+**Post 3 (Friday):**
+[Exact post to write — personal/story based, builds trust and relatability.]
 
-**Content Brief:**
-[Exactly what to film or photograph. Specific shot, what to wear, what to say if video, lighting, duration. Make it actionable so Isaak can shoot it in 10 minutes.]
+**Groups to Post In:**
+- [Specific Twin Cities Facebook group name]
+- [Specific Twin Cities Facebook group name]
+- [Specific Twin Cities Facebook group name]
 
-**Why This Will Work:**
-[1 sentence on why this outperforms current creative]
+## GOOGLE BUSINESS POST THIS WEEK
+[Exact text for a Google Business post — under 300 chars, includes a call to action, Twin Cities specific]
+
+## WEEKLY GOAL
+Based on current trajectory, Isaak should aim for [X] leads this week from these specific sources: [list sources and expected leads from each].
 
 <recommendations>
-[
-  {
-    "adId": "ad_id_here",
-    "adName": "Ad name",
-    "currentBudget": 5.00,
-    "newBudget": 10.00,
-    "action": "increase",
-    "reason": "Short reason"
-  }
-]
+[]
 </recommendations>
 
-Be very specific to Twin Cities. Reference real neighborhoods: Edina, Eden Prairie, Plymouth, Minnetonka, Maple Grove, Burnsville.`;
+Be hyper-specific to Twin Cities. Reference real neighborhoods: Edina, Eden Prairie, Plymouth, Minnetonka, Maple Grove, Burnsville, Bloomington, Chaska, Shakopee. No generic advice.`;
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   const message = await client.messages.create({

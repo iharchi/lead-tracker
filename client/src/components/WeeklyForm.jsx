@@ -1,12 +1,12 @@
 import { useState } from 'react'
 
 const CHANNELS = [
-  'Facebook Buyer Ad',
-  'Facebook Seller Ad',
-  'Zillow',
+  'Google LSA',
   'Google Business',
   'Facebook Groups',
+  'Zillow',
   'Website',
+  'Referral',
 ]
 
 function getWeekStart(date = new Date()) {

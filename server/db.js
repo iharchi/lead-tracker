@@ -61,12 +61,12 @@ async function initDb() {
 
   if (count === 0) {
     const defaults = [
-      ['Facebook Buyer Ad', 'active', 'Live'],
-      ['Facebook Seller Ad', 'review', 'In Review'],
-      ['Zillow', 'active', 'Live'],
-      ['Google Business', 'pending', 'Verification Pending'],
+      ['Google LSA', 'pending', 'Setup Needed'],
+      ['Google Business', 'active', 'Live'],
       ['Facebook Groups', 'active', 'Live'],
+      ['Zillow', 'active', 'Live'],
       ['Website', 'active', 'Live'],
+      ['Referral', 'active', 'Active'],
     ];
     for (const [channel, status, label] of defaults) {
       db.run('INSERT OR IGNORE INTO channel_status (channel, status, label) VALUES (?, ?, ?)',
