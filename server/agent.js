@@ -111,81 +111,91 @@ async function analyzeAndRecommend(channelData, rawAds) {
 
   const bestChannel = channelSummary.sort((a, b) => parseFloat(b.ctr) - parseFloat(a.ctr))[0];
 
-  const prompt = `You are a real estate lead generation expert for Isaak Harchi, a real estate agent in Twin Cities, Minneapolis.
+  const prompt = `You are a real estate lead generation expert and content strategist for Isaak Harchi, a real estate agent in Twin Cities, Minneapolis.
+
+FIRST: Use web search to research the following before writing any content:
+1. Search "Minneapolis St Paul real estate market ${new Date().toLocaleDateString('en-US', {month:'long', year:'numeric'})}" for current market conditions
+2. Search "Twin Cities home prices 2026" for latest pricing trends
+3. Search "Minnesota mortgage rates today" for current rate info
+4. Search "Minneapolis real estate news this week" for any relevant local news
+
+Use the real data you find to make the Facebook posts and Google Business post accurate, timely, and valuable to local buyers and sellers.
 
 CONTEXT:
-- Meta paid ads are paused after $100 spend with only 2 low-quality leads.
-- Only active channel right now: Facebook Groups (organic, free).
-- Channels to activate this week: Google Business Profile, Zillow Profile (both free).
-- Channel to activate next week: Google LSA ($25/month).
-- Goal is high-quality leads at zero or low cost.
+- Meta paid ads are paused. Focus is 100% organic.
+- Only active channel: Facebook Groups.
+- Activating this week: Google Business Profile, Zillow.
+- Next week: Google LSA ($25/month).
 
 GOALS: 20 leads/month, 2 closed deals/year
 
 CURRENT PERFORMANCE:
-- Total leads this week: ${totalLeads}
+- Total leads: ${totalLeads}
 - Total spend: $${totalSpend.toFixed(2)}
 - Closed deals: ${deals.filter(d => d.status === 'closed').length} / 2
-
-CHANNEL DATA:
-${JSON.stringify(channelSummary, null, 2)}
 
 Provide your full response in this exact format:
 
 ## LEAD GENERATION ANALYSIS
-[2-3 direct sentences on current status and biggest opportunity this week.]
+[2-3 direct sentences on current status and biggest opportunity.]
 
 ## THIS WEEK'S PRIORITY ACTIONS
-1. [Google Business Profile — exact step to take today]
-2. [Facebook Groups — exact group name and what to post]
-3. [Zillow Profile — exact optimization to make]
+1. [Google Business — exact step]
+2. [Facebook Groups — exact group and post strategy]
+3. [Zillow — exact optimization]
 
 ## FACEBOOK GROUPS — 3 POSTS THIS WEEK
+(Use real market data you searched for. Posts should feel like a knowledgeable local agent sharing genuine insights, not marketing copy.)
 
 **Monday Post:**
-[Complete post ready to copy-paste. 3-4 sentences. Hook + value + soft CTA. Twin Cities specific. No hashtags.]
+[Complete post. 3-4 sentences. Lead with a real market stat or insight you found. Soft CTA. No hashtags.]
 
 **Wednesday Post:**
-[Complete post ready to copy-paste. Market insight or buyer/seller tip. Reference Edina, Plymouth, or Maple Grove.]
+[Complete post. Market trend or tip based on real data. Reference a specific Twin Cities neighborhood.]
 
 **Friday Post:**
-[Complete post ready to copy-paste. Personal story or win. Builds trust. Ends with a question.]
+[Complete post. Personal angle or buyer/seller story. Ends with a question to drive engagement.]
 
 **Post In These Groups:**
-- [Real Twin Cities Facebook group name]
-- [Real Twin Cities Facebook group name]
-- [Real Twin Cities Facebook group name]
-- [Real Twin Cities Facebook group name]
+- [Real Twin Cities Facebook group]
+- [Real Twin Cities Facebook group]
+- [Real Twin Cities Facebook group]
+- [Real Twin Cities Facebook group]
 
 ## GOOGLE BUSINESS POST THIS WEEK
-[Complete post ready to copy-paste. Under 280 chars. Twin Cities neighborhood + call to action.]
+[Complete post based on real market data. Under 280 chars. Includes a neighborhood and CTA.]
 
 ## ZILLOW PROFILE TIP THIS WEEK
-[One specific action on Zillow this week to improve visibility or capture leads.]
+[One specific action to improve visibility or capture leads on Zillow.]
 
-## GOOGLE LSA SETUP — DO THIS NEXT WEEK
-[3 exact steps to get Google LSA live with the $25/month budget.]
+## GOOGLE LSA SETUP — NEXT WEEK
+[3 exact steps to activate Google LSA with the $25/month budget.]
 
 ## WEEKLY LEAD TARGET
 - Facebook Groups: [X] leads
 - Google Business: [X] leads
 - Zillow: [X] leads
-- Total: [X] leads this week
+- Total: [X] leads
 
 <recommendations>
 []
 </recommendations>
 
-Use real Twin Cities neighborhoods: Edina, Eden Prairie, Plymouth, Minnetonka, Maple Grove, Burnsville, Bloomington, Chaska, Shakopee, Woodbury, Eagan. Write posts that sound like a real local agent, not a marketer.\`;
+Neighborhoods to reference: Edina, Eden Prairie, Plymouth, Minnetonka, Maple Grove, Burnsville, Bloomington, Chaska, Shakopee, Woodbury, Eagan. Sound like a real local expert, not a marketer.\`;
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   const message = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 2000,
+    max_tokens: 3000,
+    tools: [{ type: 'web_search_20250305', name: 'web_search' }],
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const fullText = message.content[0].text;
+  // Handle tool use blocks — extract the final text response
+  const fullText = message.content
+    .filter(block => block.type === 'text')
+    .map(block => block.text)
+    .join('\n');
 
   let recommendations = [];
   const recoMatch = fullText.match(/<recommendations>([\s\S]*?)<\/recommendations>/);
