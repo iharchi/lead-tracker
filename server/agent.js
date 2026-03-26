@@ -244,8 +244,9 @@ async function runAgent() {
   console.log('\n[Agent] ========== Starting daily run ==========');
   const { week_start, week_end, week_label } = getWeekRange();
   try {
-    const { channelData, rawAds } = await pullMetaData(week_start, week_end);
-    await saveWeeklyData(week_label, week_start, channelData);
+    // Meta ads are paused — skip Meta sync, use manually entered data only
+    const channelData = {};
+    const rawAds = [];
     const { analysis, recommendations, totalLeads, totalSpend } = await analyzeAndRecommend(channelData, rawAds);
     const token = uuidv4();
     storeApprovalToken(token, recommendations);
