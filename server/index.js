@@ -387,3 +387,20 @@ app.post('/api/qa/run', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── Test Facebook Post ───────────────────────────────────────────────────────
+
+app.post('/api/poster/test', async (req, res) => {
+  try {
+    const { postToFacebookPage } = require('./poster');
+    const message = req.body.message || 'Test post from IH Lead Tracker — Twin Cities real estate market update coming soon!';
+    const postId = await postToFacebookPage(message);
+    if (postId) {
+      res.json({ success: true, postId, message });
+    } else {
+      res.status(500).json({ error: 'Post failed — check FB_PAGE_TOKEN and FB_PAGE_ID in .env' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
