@@ -181,7 +181,7 @@ Provide your full response in this exact format:
 []
 </recommendations>
 
-Neighborhoods to reference: Edina, Eden Prairie, Plymouth, Minnetonka, Maple Grove, Burnsville, Bloomington, Chaska, Shakopee, Woodbury, Eagan. Sound like a real local expert, not a marketer.\`;
+Neighborhoods to reference: Edina, Eden Prairie, Plymouth, Minnetonka, Maple Grove, Burnsville, Bloomington, Chaska, Shakopee, Woodbury, Eagan. Sound like a real local expert, not a marketer.`;
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
   const message = await client.messages.create({
