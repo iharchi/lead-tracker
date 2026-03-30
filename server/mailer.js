@@ -3,14 +3,84 @@ const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 function formatAnalysis(text) {
-  return text.split('\n').map(line => {
-    if (line.startsWith('## ')) return `<h3 style="color:#1e3a5f;font-size:15px;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid #d4af37;">${line.replace('## ', '')}</h3>`;
-    if (line.startsWith('**') && line.endsWith('**')) return `<p style="font-weight:700;color:#1e3a5f;margin:12px 0 4px;">${line.replace(/\*\*/g, '')}</p>`;
-    if (line.startsWith('- ')) return `<p style="margin:4px 0 4px 16px;color:#4a5568;">✦ ${line.replace('- ', '')}</p>`;
-    if (/^\d\./.test(line)) return `<p style="margin:6px 0;color:#4a5568;font-weight:500;">${line}</p>`;
-    if (!line.trim()) return '<br>';
-    return `<p style="margin:4px 0;color:#4a5568;font-size:14px;line-height:1.7;">${line}</p>`;
-  }).join('');
+  const lines = text.split('\n');
+  let inPost = false;
+  let postContent = [];
+  const result = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Detect post blocks
+    if (line.match(/\*\*(Monday|Wednesday|Friday) Post:\*\*/)) {
+      inPost = true;
+      postContent = [];
+      const day = line.match(/\*\*(\w+) Post:\*\*/)[1];
+      result.push(`<div style="margin:16px 0;">
+        <div style="background:#1e3a5f;color:#d4af37;padding:8px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">
+          📅 ${day} Post — Copy & paste to Facebook
+          <a href="https://www.facebook.com/IsaakHarchiRealEstate" target="_blank" 
+             style="float:right;color:white;font-size:12px;font-weight:400;text-decoration:none;">
+            Post Now →
+          </a>
+        </div>
+        <div style="background:#f0f4ff;border:2px solid #1e3a5f;border-top:none;border-radius:0 0 8px 8px;padding:14px;font-size:14px;color:#2d3748;line-height:1.7;font-family:Georgia,serif;" id="post-${day.toLowerCase()}">`);
+      continue;
+    }
+
+    if (inPost) {
+      // End post block when we hit next ** header or empty line after content
+      if (line.match(/\*\*(Wednesday|Friday|Post In These Groups|Google Business|Zillow)/) || 
+          (line.startsWith('##') && postContent.length > 0)) {
+        result.push(`</div></div>`);
+        inPost = false;
+        postContent = [];
+        // Process this line normally
+        if (line.startsWith('## ')) {
+          result.push(`<h3 style="color:#1e3a5f;font-size:15px;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid #d4af37;">${line.replace('## ', '')}</h3>`);
+        } else if (line.match(/\*\*(Wednesday|Friday) Post:\*\*/)) {
+          const day = line.match(/\*\*(\w+) Post:\*\*/)[1];
+          result.push(`<div style="margin:16px 0;">
+            <div style="background:#1e3a5f;color:#d4af37;padding:8px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">
+              📅 ${day} Post — Copy & paste to Facebook
+              <a href="https://www.facebook.com/IsaakHarchiRealEstate" target="_blank" 
+                 style="float:right;color:white;font-size:12px;font-weight:400;text-decoration:none;">
+                Post Now →
+              </a>
+            </div>
+            <div style="background:#f0f4ff;border:2px solid #1e3a5f;border-top:none;border-radius:0 0 8px 8px;padding:14px;font-size:14px;color:#2d3748;line-height:1.7;font-family:Georgia,serif;">`);
+          inPost = true;
+        } else {
+          result.push(`<p style="margin:4px 0;color:#4a5568;font-size:14px;line-height:1.7;">${line}</p>`);
+        }
+      } else {
+        if (line.trim()) {
+          postContent.push(line);
+          result.push(`${line}<br>`);
+        } else if (postContent.length > 0) {
+          result.push('<br>');
+        }
+      }
+      continue;
+    }
+
+    if (line.startsWith('## ')) {
+      result.push(`<h3 style="color:#1e3a5f;font-size:15px;margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid #d4af37;">${line.replace('## ', '')}</h3>`);
+    } else if (line.startsWith('**') && line.endsWith('**')) {
+      result.push(`<p style="font-weight:700;color:#1e3a5f;margin:12px 0 4px;">${line.replace(/\*\*/g, '')}</p>`);
+    } else if (line.startsWith('- ')) {
+      result.push(`<p style="margin:4px 0 4px 16px;color:#4a5568;">✦ ${line.replace('- ', '')}</p>`);
+    } else if (/^\d\./.test(line)) {
+      result.push(`<p style="margin:6px 0;color:#4a5568;font-weight:500;">${line}</p>`);
+    } else if (!line.trim()) {
+      result.push('<br>');
+    } else {
+      result.push(`<p style="margin:4px 0;color:#4a5568;font-size:14px;line-height:1.7;">${line}</p>`);
+    }
+  }
+
+  if (inPost) result.push('</div></div>');
+  return result.join('');
 }
 
 function generateEmail({ weekLabel, analysis, recommendations, approvalUrl, totalSpend, totalLeads }) {
