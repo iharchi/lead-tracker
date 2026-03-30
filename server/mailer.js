@@ -19,7 +19,7 @@ function formatAnalysis(text) {
       result.push(`<div style="margin:16px 0;">
         <div style="background:#1e3a5f;color:#d4af37;padding:8px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">
           📅 ${day} Post — Copy & paste to Facebook
-          <a href="https://www.facebook.com/IsaakHarchiRealEstate" target="_blank" 
+          <a href="https://www.facebook.com/profile.php?id=61578428158381" target="_blank" 
              style="float:right;color:white;font-size:12px;font-weight:400;text-decoration:none;">
             Post Now →
           </a>
@@ -43,7 +43,7 @@ function formatAnalysis(text) {
           result.push(`<div style="margin:16px 0;">
             <div style="background:#1e3a5f;color:#d4af37;padding:8px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">
               📅 ${day} Post — Copy & paste to Facebook
-              <a href="https://www.facebook.com/IsaakHarchiRealEstate" target="_blank" 
+              <a href="https://www.facebook.com/profile.php?id=61578428158381" target="_blank" 
                  style="float:right;color:white;font-size:12px;font-weight:400;text-decoration:none;">
                 Post Now →
               </a>
